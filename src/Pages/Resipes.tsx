@@ -1,0 +1,505 @@
+// src/Pages/Recipes.tsx
+import React, { useState, useEffect, useMemo } from 'react';
+import './Resipes.css'; // Предполагается, что у вас есть этот файл стилей
+import { db } from '../Firebase/firebase-config';
+import {
+  collection,
+  addDoc,
+  getDocs,
+  doc,
+  updateDoc,
+  deleteDoc,
+  query, // Добавляем query для явных запросов
+} from 'firebase/firestore';
+import { useAuth } from '../Firebase/AuthContext';
+import { useNotification } from '../Context/NotificationContext'; // Импортируем наш хук уведомлений
+
+// --- ИНТЕРФЕЙСЫ ДАННЫХ ---
+// Продукт (должен быть согласован с src/Pages/Products.tsx)
+interface Product {
+  id: string;
+  name: string;
+  unit: 'kg' | 'pcs' | 'l';
+}
+
+// Ингредиент в рецепте
+interface Ingredient {
+  productId: string; // ID продукта
+  qty: number;       // Количество
+}
+
+// Категории рецептов
+type RecipeCategory = 'salad' | 'hot' | 'snack' | 'drink' | 'dessert' | 'other';
+
+// Рецепт
+interface Recipe {
+  id: string;
+  name: string;
+  category: RecipeCategory;
+  ingredients: Ingredient[];
+  // Можно добавить другие поля, например, количество порций
+  portions?: number;
+}
+
+function Recipes() {
+  const { currentUser, loading: authLoading } = useAuth();
+  const { showNotification } = useNotification(); // Получаем функцию для уведомлений
+
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [dataLoading, setDataLoading] = useState(true); // Состояние загрузки данных
+
+  // --- СОСТОЯНИЯ ДЛЯ ФОРМ И ПОИСКА ---
+  const [recipeName, setRecipeName] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<RecipeCategory>('salad'); // Имя, чтобы не конфликтовать с products.category
+
+  const [selectedProductToAdd, setSelectedProductToAdd] = useState(''); // ID продукта, выбранного для добавления в ингредиенты
+  const [ingredientQty, setIngredientQty] = useState('');
+
+  const [productSearchInIngredients, setProductSearchInIngredients] = useState(''); // Поиск продуктов для ингредиентов
+  const [recipeSearch, setRecipeSearch] = useState(''); // Поиск по рецептам
+  const [recipeFilter, setRecipeFilter] = useState<RecipeCategory | 'all'>('all'); // Фильтр по категориям рецептов
+
+  // --- ХЕЛПЕРЫ ---
+
+  // Форматирование единиц измерения (как в Products.tsx)
+  const formatUnit = (u: Product['unit']): string => {
+    switch (u) {
+      case 'kg': return 'кг';
+      case 'pcs': return 'шт';
+      case 'l': return 'л';
+      default: return String(u);
+    }
+  };
+
+  // Лейблы категорий рецептов
+  const getRecipeCategoryLabel = (c: RecipeCategory | 'all'): string => {
+    switch (c) {
+      case 'all': return 'Все';
+      case 'salad': return 'Салат';
+      case 'hot': return 'Горячее';
+      case 'snack': return 'Закуска';
+      case 'drink': return 'Напиток';
+      case 'dessert': return 'Десерт';
+      case 'other': return 'Другое';
+      default: return String(c);
+    }
+  };
+
+  // Поиск продукта по ID в загруженном массиве продуктов
+  const findProductById = (id: string | undefined): Product | undefined =>
+    products.find((p) => p.id === id);
+
+  // --- ЗАГРУЗКА ДАННЫХ (PRODUCTS И RECIPES) ---
+  const fetchAllData = async () => {
+    if (!currentUser) {
+      setProducts([]);
+      setRecipes([]);
+      setDataLoading(false);
+      return;
+    }
+
+    setDataLoading(true);
+    try {
+      // Загрузка продуктов пользователя
+      const userProductsCollectionRef = collection(db, 'users', currentUser.uid, 'products');
+      const productsSnap = await getDocs(query(userProductsCollectionRef));
+const fetchedProducts: Product[] = productsSnap.docs.map((d) => ({ ...(d.data() as Product), id: d.id }));
+      setProducts(fetchedProducts.sort((a, b) => a.name.localeCompare(b.name))); // Сразу сортируем продукты
+
+      // Загрузка рецептов пользователя
+      const userRecipesCollectionRef = collection(db, 'users', currentUser.uid, 'recipes');
+      const recipesSnap = await getDocs(query(userRecipesCollectionRef));
+const fetchedRecipes: Recipe[] = recipesSnap.docs.map((d) => ({ ...(d.data() as Recipe), id: d.id }));
+      setRecipes(fetchedRecipes.sort((a, b) => a.name.localeCompare(b.name))); // Сразу сортируем рецепты
+
+      
+    } catch (error) {
+      console.error('Ошибка при загрузке данных:', error);
+      showNotification('Не удалось загрузить данные. Пожалуйста, попробуйте еще раз.', 'error');
+    } finally {
+      setDataLoading(false);
+    }
+  };
+
+  // Вызов загрузки данных при изменении пользователя или при первом рендере
+  useEffect(() => {
+    if (!authLoading) {
+      fetchAllData();
+    }
+  }, [authLoading, currentUser]); // Зависимости: загрузка авторизации и текущий пользователь
+
+  // --- ОБРАБОТЧИКИ ДЕЙСТВИЙ ---
+
+  const handleCreateRecipe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) {
+      showNotification('Вы должны быть авторизованы для создания рецептов.', 'error');
+      return;
+    }
+    if (!recipeName.trim()) {
+      showNotification('Название рецепта не может быть пустым.', 'info');
+      return;
+    }
+
+    try {
+      const userRecipesCollectionRef = collection(db, 'users', currentUser.uid, 'recipes');
+      await addDoc(userRecipesCollectionRef, {
+        name: recipeName.trim(),
+        category: selectedCategory,
+        ingredients: [],
+      });
+      setRecipeName('');
+      showNotification('Рецепт успешно создан.', 'success');
+      await fetchAllData(); // Обновляем список
+    } catch (error) {
+      console.error('Ошибка при создании рецепта:', error);
+      showNotification('Не удалось создать рецепт. Пожалуйста, попробуйте еще раз.', 'error');
+    }
+  };
+
+  const handleAddIngredient = async (recipeId: string) => {
+    if (!currentUser) {
+      showNotification('Вы должны быть авторизованы для изменения рецептов.', 'error');
+      return;
+    }
+    if (!selectedProductToAdd || !ingredientQty || parseFloat(ingredientQty) <= 0) {
+      showNotification('Пожалуйста, выберите продукт и укажите корректное количество.', 'info');
+      return;
+    }
+
+    const recipeDocRef = doc(db, 'users', currentUser.uid, 'recipes', recipeId);
+    const currentRecipe = recipes.find((r) => r.id === recipeId);
+
+    if (!currentRecipe) {
+      showNotification('Рецепт не найден.', 'error');
+      return;
+    }
+
+    // Проверяем, есть ли уже такой ингредиент, и если есть, то обновляем его количество
+    const existingIngredientIndex = currentRecipe.ingredients.findIndex(
+      (ing) => ing.productId === selectedProductToAdd
+    );
+
+    let newIngredients: Ingredient[];
+    if (existingIngredientIndex !== -1) {
+      newIngredients = currentRecipe.ingredients.map((ing, index) =>
+        index === existingIngredientIndex
+          ? { ...ing, qty: ing.qty + parseFloat(ingredientQty) } // Прибавляем к существующему количеству
+          : ing
+      );
+      showNotification('Количество существующего ингредиента обновлено.', 'info');
+    } else {
+      newIngredients = [
+        ...currentRecipe.ingredients,
+        { productId: selectedProductToAdd, qty: parseFloat(ingredientQty) },
+      ];
+      showNotification('Ингредиент добавлен в рецепт.', 'success');
+    }
+
+    try {
+      await updateDoc(recipeDocRef, { ingredients: newIngredients });
+      setSelectedProductToAdd('');
+      setIngredientQty('');
+      setProductSearchInIngredients(''); // Очищаем поиск
+      await fetchAllData(); // Обновляем список
+    } catch (error) {
+      console.error('Ошибка при добавлении ингредиента:', error);
+      showNotification('Не удалось добавить ингредиент. Пожалуйста, попробуйте еще раз.', 'error');
+    }
+  };
+
+  const handleUpdateIngredientQty = async (recipeId: string, index: number, value: string) => {
+    if (!currentUser) {
+      showNotification('Вы должны быть авторизованы для изменения рецептов.', 'error');
+      return;
+    }
+    const newQty = parseFloat(value);
+    if (isNaN(newQty) || newQty <= 0) {
+      showNotification('Количество должно быть положительным числом.', 'info');
+      return;
+    }
+
+    const recipeDocRef = doc(db, 'users', currentUser.uid, 'recipes', recipeId);
+    const currentRecipe = recipes.find((r) => r.id === recipeId);
+
+    if (!currentRecipe) {
+      showNotification('Рецепт не найден.', 'error');
+      return;
+    }
+
+    const updatedIngredients = currentRecipe.ingredients.map((ing, i) =>
+      i === index ? { ...ing, qty: newQty } : ing
+    );
+
+    try {
+      await updateDoc(recipeDocRef, { ingredients: updatedIngredients });
+      showNotification('Количество ингредиента обновлено.', 'success');
+      // Оптимизация: вместо fetchAllData, можно обновить только текущий рецепт в стейте
+      setRecipes((prev) =>
+        prev.map((r) => (r.id === recipeId ? { ...r, ingredients: updatedIngredients } : r))
+      );
+    } catch (error) {
+      console.error('Ошибка при обновлении количества ингредиента:', error);
+      showNotification('Не удалось обновить количество ингредиента. Пожалуйста, попробуйте еще раз.', 'error');
+    }
+  };
+
+  const handleDeleteIngredient = async (recipeId: string, index: number) => {
+    if (!currentUser) {
+      showNotification('Вы должны быть авторизованы для изменения рецептов.', 'error');
+      return;
+    }
+
+    const recipeDocRef = doc(db, 'users', currentUser.uid, 'recipes', recipeId);
+    const currentRecipe = recipes.find((r) => r.id === recipeId);
+
+    if (!currentRecipe) {
+      showNotification('Рецепт не найден.', 'error');
+      return;
+    }
+
+    const updatedIngredients = currentRecipe.ingredients.filter((_, i) => i !== index);
+
+    try {
+      await updateDoc(recipeDocRef, { ingredients: updatedIngredients });
+      showNotification('Ингредиент удален из рецепта.', 'success');
+      // Оптимизация: вместо fetchAllData, можно обновить только текущий рецепт в стейте
+      setRecipes((prev) =>
+        prev.map((r) => (r.id === recipeId ? { ...r, ingredients: updatedIngredients } : r))
+      );
+    } catch (error) {
+      console.error('Ошибка при удалении ингредиента:', error);
+      showNotification('Не удалось удалить ингредиент. Пожалуйста, попробуйте еще раз.', 'error');
+    }
+  };
+
+  const handleDeleteRecipe = async (recipeId: string) => {
+    if (!currentUser) {
+      showNotification('Вы должны быть авторизованы для удаления рецептов.', 'error');
+      return;
+    }
+    try {
+      const recipeDocRef = doc(db, 'users', currentUser.uid, 'recipes', recipeId);
+      await deleteDoc(recipeDocRef);
+      showNotification('Рецепт успешно удален.', 'success');
+      await fetchAllData(); // Обновляем список
+    } catch (error) {
+      console.error('Ошибка при удалении рецепта:', error);
+      showNotification('Не удалось удалить рецепт. Пожалуйста, попробуйте еще раз.', 'error');
+    }
+  };
+
+  // --- ФИЛЬТРАЦИЯ И ПОИСК ДЛЯ ОТОБРАЖЕНИЯ ---
+
+  // Фильтрация продуктов для селекта ингредиентов (useMemo для производительности)
+  const filteredProductsForIngredients = useMemo(() => {
+    if (!productSearchInIngredients.trim()) {
+      return products;
+    }
+    return products.filter((p) =>
+      p.name.toLowerCase().includes(productSearchInIngredients.toLowerCase())
+    );
+  }, [products, productSearchInIngredients]);
+
+
+  // Фильтрация и поиск рецептов (useMemo для производительности)
+  const filteredRecipes = useMemo(() => {
+    let result = recipes;
+
+    if (recipeFilter !== 'all') {
+      result = result.filter((r) => r.category === recipeFilter);
+    }
+
+    if (recipeSearch.trim()) {
+      result = result.filter((r) =>
+        r.name.toLowerCase().includes(recipeSearch.toLowerCase())
+      );
+    }
+
+    return result;
+  }, [recipes, recipeFilter, recipeSearch]);
+
+  // --- UI РЕНДЕР ---
+
+  // Отображение заглушки при загрузке
+  if (authLoading || dataLoading) {
+    return (
+      <div className="page">
+        <p>Загрузка данных...</p>
+      </div>
+    );
+  }
+
+  // Если пользователь не авторизован
+  if (!currentUser) {
+    return (
+      <div className="page">
+        <p>Пожалуйста, войдите, чтобы управлять вашими рецептами.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="page">
+      <h1>Рецепты</h1>
+
+      {/* Поиск рецептов */}
+      <input
+        className="search-input-recipe"
+        type="text"
+        placeholder="Поиск рецепта"
+        value={recipeSearch}
+        onChange={(e) => setRecipeSearch(e.target.value)}
+      />
+
+      {/* Фильтр по категориям рецептов */}
+      <div className="category-filter">
+        {[
+          'all', 'salad', 'hot', 'snack', 'drink', 'dessert', 'other'
+        ].map((key) => (
+          <button
+            key={key}
+            className={recipeFilter === key ? 'filter-active' : 'category-filter-button'}
+            onClick={() => setRecipeFilter(key as RecipeCategory | 'all')}
+          >
+            {getRecipeCategoryLabel(key as RecipeCategory | 'all')}
+          </button>
+        ))}
+      </div>
+
+      {/* Форма создания нового рецепта */}
+      <form className="new-recipe-form" onSubmit={handleCreateRecipe}>
+        <h3>Новое блюдо</h3>
+        <input
+          className="new-recipe-input"
+          type="text"
+          placeholder="Название блюда"
+          value={recipeName}
+          onChange={(e) => setRecipeName(e.target.value)}
+        />
+        <select
+          className="recipe-category"
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value as RecipeCategory)}
+        >
+          <option value="salad">{getRecipeCategoryLabel('salad')}</option>
+          <option value="hot">{getRecipeCategoryLabel('hot')}</option>
+          <option value="snack">{getRecipeCategoryLabel('snack')}</option>
+          <option value="drink">{getRecipeCategoryLabel('drink')}</option>
+          <option value="dessert">{getRecipeCategoryLabel('dessert')}</option>
+          <option value="other">{getRecipeCategoryLabel('other')}</option>
+        </select>
+        <button className="create-recipe-btn" type="submit">
+          + Создать
+        </button>
+      </form>
+
+      {/* Список блюд */}
+      <div className="recipes-list">
+        <h2>Список блюд</h2>
+        {filteredRecipes.length === 0 ? (
+          <p>Пока нет рецептов в этой категории или по вашему запросу.</p>
+        ) : (
+          filteredRecipes.map((r) => (
+            <div className="recipe-card" key={r.id}>
+              <h3>
+                {r.name} <span>({getRecipeCategoryLabel(r.category)})</span>
+              </h3>
+
+              {/* Секция добавления ингредиента в рецепт */}
+              <div className="ingredient-add">
+                <input
+                  type="text"
+                  className="product-search-in-recipe"
+                  placeholder="Поиск продукта"
+                  value={productSearchInIngredients}
+                  onChange={(e) => setProductSearchInIngredients(e.target.value)}
+                />
+
+                <select
+                  className="select-product-in-recipe"
+                  value={selectedProductToAdd}
+                  onChange={(e) => setSelectedProductToAdd(e.target.value)}
+                >
+                  <option value="">Выбрать продукт</option>
+                  {filteredProductsForIngredients.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({formatUnit(p.unit)})
+                    </option>
+                  ))}
+                </select>
+
+                <input
+                  className="qntt-product-selector"
+                  type="number"
+                  step="0.01"
+                  placeholder="Кол-во"
+                  value={ingredientQty}
+                  onChange={(e) => setIngredientQty(e.target.value)}
+                />
+
+                <span className="unit-label">
+                  {selectedProductToAdd
+                    ? formatUnit(findProductById(selectedProductToAdd)?.unit || 'pcs') // Default to 'pcs' if unit is undefined
+                    : ''}
+                </span>
+
+                <button
+                  className="add-ingredient-btn"
+                  onClick={() => handleAddIngredient(r.id)}
+                >
+                  + Добавить ингредиент
+                </button>
+              </div>
+
+              {/* Список ингредиентов текущего рецепта */}
+              <ul className="ingredients-list">
+                <p>Ингредиенты</p>
+                {r.ingredients.length === 0 ? (
+                  <li>Нет ингредиентов.</li>
+                ) : (
+                  r.ingredients.map((ing, i) => {
+                    const prod = findProductById(ing.productId);
+                    return (
+                      <li className="ingredient-item" key={ing.productId}> {/* Используем productId как key, если он уникален */}
+                        {prod ? prod.name : 'Неизвестный продукт'}
+                        <input
+                          className="input-qntt-ingrdts"
+                          type="number"
+                          step="0.01"
+                          value={ing.qty}
+                          onChange={(e) =>
+                            handleUpdateIngredientQty(r.id, i, e.target.value)
+                          }
+                        />
+                        <span className="unit-label">
+                          {prod ? formatUnit(prod.unit) : ''}
+                        </span>
+                        <button
+                          className="delete-ingredient-btn"
+                          onClick={() => handleDeleteIngredient(r.id, i)}
+                        >
+                          ×
+                        </button>
+                      </li>
+                    );
+                  })
+                )}
+              </ul>
+
+              <button
+                className="delete-recipe"
+                onClick={() => handleDeleteRecipe(r.id)}
+              >
+                Удалить блюдо
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default Recipes;

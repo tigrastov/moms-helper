@@ -1,0 +1,58 @@
+/* src/Context/Notification.css */
+.notification-container {
+  position: fixed; /* Фиксированное положение на экране */
+  bottom: 20px;    /* Отступ от нижнего края */
+  right: 20px;     /* Отступ от правого края */
+  z-index: 1000;   /* Поверх всех остальных элементов */
+  display: flex;
+  flex-direction: column; /* Уведомления будут располагаться друг над другом */
+  gap: 10px;       /* Пространство между уведомлениями */
+  max-width: 300px; /* Максимальная ширина уведомления */
+}
+
+.notification-item {
+  padding: 10px 15px;
+  border-radius: 8px; /* Немного скругляем углы */
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.95em;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); /* Красивая тень */
+  opacity: 0; /* Начальное состояние для анимации */
+  animation: fadeInOut 3s forwards; /* Анимация появления и исчезания */
+}
+
+/* Стили для разных типов уведомлений */
+.notification-success {
+  background-color: #4CAF50; /* Зеленый */
+}
+
+.notification-error {
+  background-color: #f44336; /* Красный */
+}
+
+.notification-info {
+  background-color: #2196F3; /* Синий */
+}
+
+/* Кнопка закрытия */
+.notification-item button {
+  background: none;
+  border: none;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 1.2em;
+  margin-left: 10px;
+  line-height: 1; /* Для центрирования символа 'x' */
+}
+
+/* Анимация появления и исчезания */
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateY(20px); } /* Сначала невидимое и снизу */
+  10% { opacity: 1; transform: translateY(0); }  /* Быстро появляется */
+  90% { opacity: 1; transform: translateY(0); }  /* Держится видимым */
+  100% { opacity: 0; transform: translateY(20px); } /* Медленно исчезает */
+}
+
