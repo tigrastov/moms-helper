@@ -1,6 +1,6 @@
-// src/Pages/Recipes.tsx
-import React, { useState, useEffect, useMemo } from 'react';
-import './Resipes.css'; // Предполагается, что у вас есть этот файл стилей
+
+import { useState, useEffect, useMemo } from 'react';
+import './Recipes.css'; // Предполагается, что у вас есть этот файл стилей
 import { db } from '../Firebase/firebase-config';
 import {
   collection,
@@ -59,6 +59,7 @@ function Recipes() {
   const [productSearchInIngredients, setProductSearchInIngredients] = useState(''); // Поиск продуктов для ингредиентов
   const [recipeSearch, setRecipeSearch] = useState(''); // Поиск по рецептам
   const [recipeFilter, setRecipeFilter] = useState<RecipeCategory | 'all'>('all'); // Фильтр по категориям рецептов
+  const [expandedRecipeId, setExpandedRecipeId] = useState<string | null>(null);
 
   // --- ХЕЛПЕРЫ ---
 
@@ -85,7 +86,10 @@ function Recipes() {
       default: return String(c);
     }
   };
-
+  
+   const toggleRecipeExpansion = (recipeId: string) => {
+    setExpandedRecipeId(expandedRecipeId === recipeId ? null : recipeId);
+  };
   // Поиск продукта по ID в загруженном массиве продуктов
   const findProductById = (id: string | undefined): Product | undefined =>
     products.find((p) => p.id === id);
@@ -322,7 +326,6 @@ const fetchedRecipes: Recipe[] = recipesSnap.docs.map((d) => ({ ...(d.data() as 
 
   // --- UI РЕНДЕР ---
 
-  // Отображение заглушки при загрузке
   if (authLoading || dataLoading) {
     return (
       <div className="page">
@@ -331,7 +334,6 @@ const fetchedRecipes: Recipe[] = recipesSnap.docs.map((d) => ({ ...(d.data() as 
     );
   }
 
-  // Если пользователь не авторизован
   if (!currentUser) {
     return (
       <div className="page">
@@ -345,22 +347,22 @@ const fetchedRecipes: Recipe[] = recipesSnap.docs.map((d) => ({ ...(d.data() as 
       <h1>Рецепты</h1>
 
       {/* Поиск рецептов */}
-      <input
-        className="search-input-recipe"
-        type="text"
-        placeholder="Поиск рецепта"
-        value={recipeSearch}
-        onChange={(e) => setRecipeSearch(e.target.value)}
-      />
+      <div className="recipe-search-container">
+        <input
+          className="search-input-recipe"
+          type="text"
+          placeholder="Поиск рецепта"
+          value={recipeSearch}
+          onChange={(e) => setRecipeSearch(e.target.value)}
+        />
+      </div>
 
       {/* Фильтр по категориям рецептов */}
       <div className="category-filter">
-        {[
-          'all', 'salad', 'hot', 'snack', 'drink', 'dessert', 'other'
-        ].map((key) => (
+        {['all', 'salad', 'hot', 'snack', 'drink', 'dessert', 'other'].map((key) => (
           <button
             key={key}
-            className={recipeFilter === key ? 'filter-active' : 'category-filter-button'}
+            className={`category-filter-button ${recipeFilter === key ? 'filter-active' : ''}`}
             onClick={() => setRecipeFilter(key as RecipeCategory | 'all')}
           >
             {getRecipeCategoryLabel(key as RecipeCategory | 'all')}
@@ -371,131 +373,182 @@ const fetchedRecipes: Recipe[] = recipesSnap.docs.map((d) => ({ ...(d.data() as 
       {/* Форма создания нового рецепта */}
       <form className="new-recipe-form" onSubmit={handleCreateRecipe}>
         <h3>Новое блюдо</h3>
-        <input
-          className="new-recipe-input"
-          type="text"
-          placeholder="Название блюда"
-          value={recipeName}
-          onChange={(e) => setRecipeName(e.target.value)}
-        />
-        <select
-          className="recipe-category"
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value as RecipeCategory)}
-        >
-          <option value="salad">{getRecipeCategoryLabel('salad')}</option>
-          <option value="hot">{getRecipeCategoryLabel('hot')}</option>
-          <option value="snack">{getRecipeCategoryLabel('snack')}</option>
-          <option value="drink">{getRecipeCategoryLabel('drink')}</option>
-          <option value="dessert">{getRecipeCategoryLabel('dessert')}</option>
-          <option value="other">{getRecipeCategoryLabel('other')}</option>
-        </select>
-        <button className="create-recipe-btn" type="submit">
-          + Создать
-        </button>
+        <div className="new-recipe-inputs">
+          <input
+            className="new-recipe-input"
+            type="text"
+            placeholder="Название блюда"
+            value={recipeName}
+            onChange={(e) => setRecipeName(e.target.value)}
+          />
+          <select
+            className="recipe-category"
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value as RecipeCategory)}
+          >
+            <option value="salad">{getRecipeCategoryLabel('salad')}</option>
+            <option value="hot">{getRecipeCategoryLabel('hot')}</option>
+            <option value="snack">{getRecipeCategoryLabel('snack')}</option>
+            <option value="drink">{getRecipeCategoryLabel('drink')}</option>
+            <option value="dessert">{getRecipeCategoryLabel('dessert')}</option>
+            <option value="other">{getRecipeCategoryLabel('other')}</option>
+          </select>
+          <button className="create-recipe-btn" type="submit">
+            + Создать
+          </button>
+        </div>
       </form>
 
-      {/* Список блюд */}
+      {/* Список блюд в виде аккордеона */}
       <div className="recipes-list">
-        <h2>Список блюд</h2>
+        <h2>Список блюд ({filteredRecipes.length})</h2>
+        
         {filteredRecipes.length === 0 ? (
-          <p>Пока нет рецептов в этой категории или по вашему запросу.</p>
+          <p className="no-recipes">Пока нет рецептов в этой категории или по вашему запросу.</p>
         ) : (
-          filteredRecipes.map((r) => (
-            <div className="recipe-card" key={r.id}>
-              <h3>
-                {r.name} <span>({getRecipeCategoryLabel(r.category)})</span>
-              </h3>
-
-              {/* Секция добавления ингредиента в рецепт */}
-              <div className="ingredient-add">
-                <input
-                  type="text"
-                  className="product-search-in-recipe"
-                  placeholder="Поиск продукта"
-                  value={productSearchInIngredients}
-                  onChange={(e) => setProductSearchInIngredients(e.target.value)}
-                />
-
-                <select
-                  className="select-product-in-recipe"
-                  value={selectedProductToAdd}
-                  onChange={(e) => setSelectedProductToAdd(e.target.value)}
-                >
-                  <option value="">Выбрать продукт</option>
-                  {filteredProductsForIngredients.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({formatUnit(p.unit)})
-                    </option>
-                  ))}
-                </select>
-
-                <input
-                  className="qntt-product-selector"
-                  type="number"
-                  step="0.01"
-                  placeholder="Кол-во"
-                  value={ingredientQty}
-                  onChange={(e) => setIngredientQty(e.target.value)}
-                />
-
-                <span className="unit-label">
-                  {selectedProductToAdd
-                    ? formatUnit(findProductById(selectedProductToAdd)?.unit || 'pcs') // Default to 'pcs' if unit is undefined
-                    : ''}
-                </span>
-
-                <button
-                  className="add-ingredient-btn"
-                  onClick={() => handleAddIngredient(r.id)}
-                >
-                  + Добавить ингредиент
-                </button>
-              </div>
-
-              {/* Список ингредиентов текущего рецепта */}
-              <ul className="ingredients-list">
-                <p>Ингредиенты</p>
-                {r.ingredients.length === 0 ? (
-                  <li>Нет ингредиентов.</li>
-                ) : (
-                  r.ingredients.map((ing, i) => {
-                    const prod = findProductById(ing.productId);
-                    return (
-                      <li className="ingredient-item" key={ing.productId}> {/* Используем productId как key, если он уникален */}
-                        {prod ? prod.name : 'Неизвестный продукт'}
-                        <input
-                          className="input-qntt-ingrdts"
-                          type="number"
-                          step="0.01"
-                          value={ing.qty}
-                          onChange={(e) =>
-                            handleUpdateIngredientQty(r.id, i, e.target.value)
-                          }
-                        />
-                        <span className="unit-label">
-                          {prod ? formatUnit(prod.unit) : ''}
+          <div className="recipes-accordion">
+            {filteredRecipes.map((r) => {
+              const isExpanded = expandedRecipeId === r.id;
+              const ingredientCount = r.ingredients.length;
+              
+              return (
+                <div className="recipe-accordion-item" key={r.id}>
+                  {/* ЗАГОЛОВОК АККОРДЕОНА (всегда виден) */}
+                  <div 
+                    className="recipe-accordion-header"
+                    onClick={() => toggleRecipeExpansion(r.id)}
+                  >
+                    <div className="recipe-header-left">
+                      <span className={`accordion-arrow ${isExpanded ? 'expanded' : ''}`}>
+                        ▶
+                      </span>
+                      <div className="recipe-header-info">
+                        <strong className="recipe-name">{r.name}</strong>
+                        <span className="recipe-category-badge">
+                          {getRecipeCategoryLabel(r.category)}
                         </span>
-                        <button
-                          className="delete-ingredient-btn"
-                          onClick={() => handleDeleteIngredient(r.id, i)}
-                        >
-                          ×
-                        </button>
-                      </li>
-                    );
-                  })
-                )}
-              </ul>
+                      </div>
+                      <span className="ingredients-count">
+                        {ingredientCount} {ingredientCount === 1 ? 'ингредиент' : 
+                          ingredientCount > 1 && ingredientCount < 5 ? 'ингредиента' : 'ингредиентов'}
+                      </span>
+                    </div>
+                    
+                    <button 
+                      className="delete-recipe-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteRecipe(r.id);
+                      }}
+                    >
+                      Удалить
+                    </button>
+                  </div>
 
-              <button
-                className="delete-recipe"
-                onClick={() => handleDeleteRecipe(r.id)}
-              >
-                Удалить блюдо
-              </button>
-            </div>
-          ))
+                  {/* СОДЕРЖИМОЕ АККОРДЕОНА (только если открыт) */}
+                  {isExpanded && (
+                    <div className="recipe-accordion-content">
+                      <button className="collapse-recipe-btn" onClick={() => toggleRecipeExpansion(r.id)} >Свернуть</button>
+                      {/* Секция добавления ингредиента в рецепт */}
+                      <div className="ingredient-add-section">
+                        <h4>Добавить ингредиент</h4>
+                        <div className="ingredient-add-form">
+                          <input
+                            type="text"
+                            className="product-search-in-recipe"
+                            placeholder="Поиск продукта"
+                            value={productSearchInIngredients}
+                            onChange={(e) => setProductSearchInIngredients(e.target.value)}
+                          />
+
+                          <select
+                            className="select-product-in-recipe"
+                            value={selectedProductToAdd}
+                            onChange={(e) => setSelectedProductToAdd(e.target.value)}
+                          >
+                            <option value="">Выбрать продукт</option>
+                            {filteredProductsForIngredients.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name} ({formatUnit(p.unit)})
+                              </option>
+                            ))}
+                          </select>
+
+                          <div className="quantity-input-wrapper">
+                            <input
+                              className="qntt-product-selector"
+                              type="number"
+                              step="0.01"
+                              min="0.01"
+                              placeholder="Кол-во"
+                              value={ingredientQty}
+                              onChange={(e) => setIngredientQty(e.target.value)}
+                            />
+                            <span className="unit-label">
+                              {selectedProductToAdd
+                                ? formatUnit(findProductById(selectedProductToAdd)?.unit || 'pcs')
+                                : ''}
+                            </span>
+                          </div>
+
+                          <button
+                            className="add-ingredient-btn"
+                            onClick={() => handleAddIngredient(r.id)}
+                          >
+                            + Добавить
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Список ингредиентов текущего рецепта */}
+                      <div className="ingredients-section">
+                        <h4>Ингредиенты</h4>
+                        <ul className="ingredients-list">
+                          {r.ingredients.length === 0 ? (
+                            <li className="no-ingredients">Нет ингредиентов.</li>
+                          ) : (
+                            r.ingredients.map((ing, i) => {
+                              const prod = findProductById(ing.productId);
+                              return (
+                                <li className="ingredient-item" key={`${ing.productId}-${i}`}>
+                                  <div className="ingredient-info">
+                                    <span className="ingredient-name">
+                                      {prod ? prod.name : 'Неизвестный продукт'}
+                                    </span>
+                                  </div>
+                                  <div className="ingredient-controls">
+                                    <input
+                                      className="input-qntt-ingrdts"
+                                      type="number"
+                                      step="0.01"
+                                      min="0.01"
+                                      value={ing.qty}
+                                      onChange={(e) =>
+                                        handleUpdateIngredientQty(r.id, i, e.target.value)
+                                      }
+                                    />
+                                    <span className="unit-label">
+                                      {prod ? formatUnit(prod.unit) : ''}
+                                    </span>
+                                    <button
+                                      className="delete-ingredient-btn"
+                                      onClick={() => handleDeleteIngredient(r.id, i)}
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                </li>
+                              );
+                            })
+                          )}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>

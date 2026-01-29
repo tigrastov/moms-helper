@@ -1,0 +1,428 @@
+/* Recipes.css */
+
+.page {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Поиск рецептов */
+.recipe-search-container {
+  margin-bottom: 20px;
+}
+
+.search-input-recipe {
+  width: 100%;
+  max-width: 400px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+/* Фильтр по категориям */
+.category-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 30px;
+}
+
+.category-filter-button {
+  padding: 8px 16px;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.category-filter-button:hover {
+  background-color: #e9ecef;
+}
+
+.filter-active {
+  background-color: #4CAF50;
+  color: white;
+  border-color: #45a049;
+}
+
+.filter-active:hover {
+  background-color: #45a049;
+}
+
+/* Форма создания рецепта */
+.new-recipe-form {
+  margin-bottom: 40px;
+  padding: 25px;
+  background-color: #e8f4ff;
+  border-radius: 10px;
+}
+
+.new-recipe-form h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #2c3e50;
+}
+
+.new-recipe-inputs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.new-recipe-input {
+  flex: 1;
+  min-width: 250px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.recipe-category {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  min-width: 150px;
+}
+
+.create-recipe-btn {
+  padding: 10px 24px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.create-recipe-btn:hover {
+  background-color: #45a049;
+}
+
+/* Аккордеон рецептов */
+.recipes-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.recipe-accordion-item {
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Заголовок аккордеона */
+.recipe-accordion-header {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.recipe-accordion-header:hover {
+  background-color: #e9ecef;
+}
+
+.recipe-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.accordion-arrow {
+  display: inline-block;
+  transition: transform 0.3s ease;
+  font-size: 12px;
+  width: 20px;
+  text-align: center;
+}
+
+.accordion-arrow.expanded {
+  transform: rotate(90deg);
+}
+
+.recipe-header-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.recipe-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.recipe-category-badge {
+  background-color: #e3f2fd;
+  color: #1976d2;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.ingredients-count {
+  color: #666;
+  font-size: 14px;
+  background-color: #f0f0f0;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+.delete-recipe-btn {
+  background-color: #ff4444;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.delete-recipe-btn:hover {
+  background-color: #cc0000;
+}
+
+/* Контент аккордеона */
+.recipe-accordion-content {
+  padding: 25px;
+  border: 1px solid #dee2e6;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  background-color: white;
+}
+
+/* Секция добавления ингредиента */
+.ingredient-add-section {
+  margin-bottom: 30px;
+  padding-bottom: 25px;
+  border-bottom: 2px solid #eee;
+}
+
+.ingredient-add-section h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #2c3e50;
+}
+
+.ingredient-add-form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.product-search-in-recipe {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.select-product-in-recipe {
+  flex: 2;
+  min-width: 250px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.quantity-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #f8f9fa;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.qntt-product-selector {
+  width: 100px;
+  padding: 8px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  text-align: right;
+}
+
+.unit-label {
+  color: #666;
+  font-size: 14px;
+  min-width: 30px;
+}
+
+.add-ingredient-btn {
+  padding: 10px 20px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.add-ingredient-btn:hover {
+  background-color: #2980b9;
+}
+
+/* Список ингредиентов */
+.ingredients-section h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #2c3e50;
+}
+
+.ingredients-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.no-ingredients {
+  color: #999;
+  font-style: italic;
+  padding: 15px;
+  text-align: center;
+  background-color: #f9f9f9;
+  border-radius: 6px;
+}
+
+.ingredient-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+}
+
+.ingredient-info {
+  flex: 1;
+}
+
+.ingredient-name {
+  font-weight: 500;
+  font-size: 15px;
+}
+
+.ingredient-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.input-qntt-ingrdts {
+  width: 90px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.delete-ingredient-btn {
+  background-color: #ff6b6b;
+  color: white;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-ingredient-btn:hover {
+  background-color: #ff5252;
+}
+
+/* Сообщение об отсутствии рецептов */
+.no-recipes {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .new-recipe-inputs {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .new-recipe-input,
+  .recipe-category,
+  .create-recipe-btn {
+    width: 100%;
+  }
+  
+  .ingredient-add-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .product-search-in-recipe,
+  .select-product-in-recipe,
+  .quantity-input-wrapper,
+  .add-ingredient-btn {
+    width: 100%;
+  }
+  
+  .recipe-accordion-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .recipe-header-left {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .delete-recipe-btn {
+    align-self: flex-end;
+  }
+  
+  .ingredient-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .ingredient-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

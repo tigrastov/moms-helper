@@ -1,10 +1,322 @@
-.orders-page{
-  background-color: yellow;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  overflow-y: auto;
+/* Orders.css */
+
+.page {
   padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Форма поиска */
+.search-date-form {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.search-date-input {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+/* Форма создания заказа */
+.order-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 30px;
+  padding: 20px;
+  background-color: #e8f4ff;
+  border-radius: 8px;
+}
+
+.title-new-order {
+  font-weight: bold;
+  margin-right: 10px;
+}
+
+.date-new-order,
+.name-new-order {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.name-new-order {
+  flex: 1;
+  min-width: 200px;
+}
+
+.btn-new-order {
+  padding: 10px 20px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-new-order:hover {
+  background-color: #45a049;
+}
+
+/* Список заказов */
+.order-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.order-item {
+  margin-bottom: 15px;
+}
+
+/* Заголовок аккордеона */
+.accordion-header {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.accordion-header:hover {
+  background-color: #e9ecef;
+}
+
+.accordion-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.accordion-arrow {
+  display: inline-block;
+  transition: transform 0.3s ease;
+  font-size: 12px;
+  width: 20px;
+  text-align: center;
+}
+
+.accordion-arrow.expanded {
+  transform: rotate(90deg);
+}
+
+.order-name {
+  font-size: 16px;
+}
+
+.order-date {
+  color: #666;
+  font-size: 14px;
+}
+
+.order-dishes-count {
+  background-color: #e0e0e0;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 14px;
+  color: #333;
+}
+
+.delete-order-btn {
+  background-color: #ff4444;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.delete-order-btn:hover {
+  background-color: #cc0000;
+}
+
+/* Контент заказа (раскрытый) */
+.order-content {
+  padding: 20px;
+  border: 1px solid #dee2e6;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  background-color: #fff;
+  margin-top: -5px;
+}
+
+/* Список блюд в заказе */
+.order-recipes {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+}
+
+.order-recipe-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
+
+.recipe-name {
+  flex: 1;
+  font-weight: 500;
+}
+
+.qty-person-input {
+  width: 70px;
+  padding: 6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.portions-text {
+  color: #666;
+  font-size: 14px;
+}
+
+.remove-recipe-btn {
+  background-color: #ff6b6b;
+  color: white;
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-recipe-btn:hover {
+  background-color: #ff5252;
+}
+
+/* Список продуктов */
+.order-summary {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+}
+
+.product-item {
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+}
+
+.product-name {
+  font-weight: 500;
+}
+
+.product-amount {
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+/* Форма добавления блюда */
+.add-dish-container {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 2px solid #eee;
+}
+
+.order-add {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.select-category,
+.select-recipe,
+.add-recipe-qty {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.select-category {
+  width: 180px;
+}
+
+.select-recipe {
+  flex: 1;
+  min-width: 250px;
+}
+
+.add-recipe-qty {
+  width: 120px;
+}
+
+.add-recipe-btn {
+  padding: 10px 20px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.add-recipe-btn:hover {
+  background-color: #2980b9;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .order-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .name-new-order {
+    width: 100%;
+  }
+  
+  .order-add {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .select-category,
+  .select-recipe,
+  .add-recipe-qty,
+  .add-recipe-btn {
+    width: 100%;
+  }
+  
+  .accordion-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .accordion-header-left {
+    width: 100%;
+  }
+  
+  .delete-order-btn {
+    align-self: flex-end;
+  }
 }

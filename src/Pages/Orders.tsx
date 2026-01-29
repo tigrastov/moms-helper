@@ -80,6 +80,7 @@ function Orders() {
   const [newOrderName, setNewOrderName] = useState('');
   const [newOrderDate, setNewOrderDate] = useState(''); // Формат 'YYYY-MM-DD'
   const [searchDate, setSearchDate] = useState(''); // Для поиска по дате
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
 
   // Состояние для добавления блюд в конкретный заказ
   const [addForm, setAddForm] = useState<AddFormState>({});
@@ -126,7 +127,12 @@ function Orders() {
       return dateStr;
     }
   };
+   
 
+  // --- НОВАЯ ФУНКЦИЯ: переключение состояния аккордеона ---
+  const toggleOrderExpansion = (orderId: string) => {
+    setExpandedOrderId(expandedOrderId === orderId ? null : orderId);
+  };
   // Поиск рецепта по ID в загруженном массиве рецептов
   const findRecipeById = (id: string | undefined): Recipe | undefined =>
     recipes.find((r) => r.id === id);
@@ -405,14 +411,13 @@ function Orders() {
 
   // Отображение заглушки при загрузке
   if (authLoading || dataLoading) {
-    return (
+      return (
       <div className="page">
         <p>Загрузка данных...</p>
       </div>
     );
   }
 
-  // Если пользователь не авторизован
   if (!currentUser) {
     return (
       <div className="page">
@@ -423,7 +428,7 @@ function Orders() {
 
   return (
     <div className="page">
-      <h1>Заказы</h1>
+      <h1>Orders</h1>
 
       {/* Поиск по дате */}
       <div className="search-date-form">
@@ -458,113 +463,161 @@ function Orders() {
       </form>
 
       <h2>Список заказов</h2>
-      {/* Заказы */}
+      
+      {/* Заказы в виде аккордеона */}
       <ul className="order-list">
         {filteredOrders.length === 0 ? (
           <p>Пока нет заказов по вашему запросу.</p>
         ) : (
-          filteredOrders.map((o) => (
-            <li key={o.id} className="order-item">
-              <div className="order-header">
-                <strong className="order-name">{o.name}</strong>
-                <span className="order-date">({formatDateForDisplay(o.date)})</span>
-                <button className="delete-order-btn" onClick={() => handleDeleteOrder(o.id)}>
-                  Удалить заказ
-                </button>
-              </div>
-
-              <div className="order-recipes-container">
-                <p>Блюда в заказе:</p>
-                <ul className="order-recipes">
-                  {o.items.length === 0 ? (
-                    <li>Нет блюд в этом заказе.</li>
-                  ) : (
-                    o.items.map((item, i) => {
-                      const recipe = findRecipeById(item.recipeId);
-                      return (
-                        <li className="order-recipe-item" key={item.recipeId}> {/* Используем recipeId как key */}
-                          {recipe ? recipe.name : 'Неизвестное блюдо'} —
-                          <input
-                            className="qty-person-input"
-                            type="number"
-                            min="1"
-                            value={item.qty}
-                            onChange={(e) => handleUpdateItemQty(o.id, i, e.target.value)}
-                          />
-                          порц.
-                          <button onClick={() => handleRemoveItemFromOrder(o.id, i)}>×</button>
-                        </li>
-                      );
-                    })
-                  )}
-                </ul>
-              </div>
-
-              <div>
-                <p>Необходимые продукты для заказа:</p>
-                <ul className="order-summary">
-                  {calculateProductsForOrder(o).length === 0 ? (
-                    <li>Нет данных для расчета.</li>
-                  ) : (
-                    calculateProductsForOrder(o).map((p) => (
-                      <li key={p.name}>{p.name} = {p.amount} {formatUnit(p.unit)}</li>
-                    ))
-                  )}
-                </ul>
-              </div>
-
-              <p>Добавление блюда к заказу:</p>
-              <div className="order-add">
-                {/* Селект для категории рецептов */}
-                <select
-                  className="select-category" // Я изменил название класса, чтобы избежать конфликта с существующим css
-                  value={addForm[o.id]?.selectedCategory || 'all'}
-                  onChange={(e) => updateAddForm(o.id, 'selectedCategory', e.target.value)}
+          filteredOrders.map((o) => {
+            const isExpanded = expandedOrderId === o.id;
+            
+            return (
+              <li key={o.id} className={`order-item ${isExpanded ? 'expanded' : 'collapsed'}`}>
+                {/* ЗАГОЛОВОК АККОРДЕОНА (всегда виден) */}
+                <div 
+                  className="order-header accordion-header"
+                  onClick={() => toggleOrderExpansion(o.id)}
                 >
-                  <option value="all">Все категории</option>
-                  <option value="salad">{getRecipeCategoryLabel('salad')}</option>
-                  <option value="hot">{getRecipeCategoryLabel('hot')}</option>
-                  <option value="snack">{getRecipeCategoryLabel('snack')}</option>
-                  <option value="drink">{getRecipeCategoryLabel('drink')}</option>
-                  <option value="dessert">{getRecipeCategoryLabel('dessert')}</option>
-                  <option value="other">{getRecipeCategoryLabel('other')}</option>
-                </select>
+                  <div className="accordion-header-left">
+                    <span className={`accordion-arrow ${isExpanded ? 'expanded' : ''}`}>
+                      ▶
+                    </span>
+                    <strong className="order-name">{o.name}</strong>
+                    <span className="order-date">({formatDateForDisplay(o.date)})</span>
+                    <span className="order-dishes-count">
+                      {o.items.length} блюд
+                    </span>
+                  </div>
+                  
+                  <button 
+                    className="delete-order-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteOrder(o.id);
+                    }}
+                  >
+                    Удалить
+                  </button>
+                </div>
 
-                {/* Селект для выбора рецепта */}
-                <select
-                  className="select-recipe"
-                  value={addForm[o.id]?.selectedRecipeId || ''}
-                  onChange={(e) => updateAddForm(o.id, 'selectedRecipeId', e.target.value)}
-                >
-                  <option value="">Выбрать блюдо</option>
-                  {recipes
-                    .filter((r) =>
-                      addForm[o.id]?.selectedCategory && addForm[o.id]?.selectedCategory !== 'all'
-                        ? r.category === addForm[o.id].selectedCategory
-                        : true
-                    )
-                    .map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name} ({getRecipeCategoryLabel(r.category)})
-                      </option>
-                    ))}
-                </select>
+                {/* СОДЕРЖИМОЕ АККОРДЕОНА (только если открыт) */}
+                {isExpanded && (
+                  <div className="order-content">
+                    {/* Блюда в заказе */}
+                    <div className="order-recipes-container">
+                      <button className="close-btn" onClick={() => toggleOrderExpansion(o.id)}>Close</button>
+                      <p><strong>Блюда в заказе:</strong></p>
+                      <ul className="order-recipes">
+                        {o.items.length === 0 ? (
+                          <li>Нет блюд в этом заказе.</li>
+                        ) : (
+                          o.items.map((item, i) => {
+                            const recipe = findRecipeById(item.recipeId);
+                            return (
+                              <li 
+                                className="order-recipe-item" 
+                                key={`${item.recipeId}-${i}`}
+                              >
+                                <span className="recipe-name">
+                                  {recipe ? recipe.name : 'Неизвестное блюдо'}
+                                </span>
+                                <input
+                                  className="qty-person-input"
+                                  type="number"
+                                  min="1"
+                                  value={item.qty}
+                                  onChange={(e) => handleUpdateItemQty(o.id, i, e.target.value)}
+                                />
+                                <span className="portions-text">порц.</span>
+                                <button 
+                                  className="remove-recipe-btn"
+                                  onClick={() => handleRemoveItemFromOrder(o.id, i)}
+                                >
+                                  ×
+                                </button>
+                              </li>
+                            );
+                          })
+                        )}
+                      </ul>
+                    </div>
 
-                {/* Инпут для количества порций */}
-                <input
-                  className="add-recipe-qty"
-                  type="number"
-                  min="1"
-                  placeholder="Кол-во порций"
-                  value={addForm[o.id]?.qty || ''}
-                  onChange={(e) => updateAddForm(o.id, 'qty', e.target.value)}
-                />
-                <button className="add-recipe-btn" onClick={() => handleAddItemToOrder(o.id)}>
-                  + Добавить блюдо
-                </button>
-              </div>
-            </li>
-          ))
+                    {/* Необходимые продукты */}
+                    <div className="order-products-container">
+                      <p><strong>Необходимые продукты:</strong></p>
+                      <ul className="order-summary">
+                        {calculateProductsForOrder(o).length === 0 ? (
+                          <li>Нет данных для расчета.</li>
+                        ) : (
+                          calculateProductsForOrder(o).map((p) => (
+                            <li key={p.name} className="product-item">
+                              <span className="product-name">{p.name}</span> 
+                              <span className="product-amount"> = {p.amount} {formatUnit(p.unit)}</span>
+                            </li>
+                          ))
+                        )}
+                      </ul>
+                    </div>
+
+                    {/* Форма добавления блюда */}
+                    <div className="add-dish-container">
+                      <p><strong>Добавить блюдо к заказу:</strong></p>
+                      <div className="order-add">
+                        <select
+                          className="select-category"
+                          value={addForm[o.id]?.selectedCategory || 'all'}
+                          onChange={(e) => updateAddForm(o.id, 'selectedCategory', e.target.value)}
+                        >
+                          <option value="all">Все категории</option>
+                          <option value="salad">{getRecipeCategoryLabel('salad')}</option>
+                          <option value="hot">{getRecipeCategoryLabel('hot')}</option>
+                          <option value="snack">{getRecipeCategoryLabel('snack')}</option>
+                          <option value="drink">{getRecipeCategoryLabel('drink')}</option>
+                          <option value="dessert">{getRecipeCategoryLabel('dessert')}</option>
+                          <option value="other">{getRecipeCategoryLabel('other')}</option>
+                        </select>
+
+                        <select
+                          className="select-recipe"
+                          value={addForm[o.id]?.selectedRecipeId || ''}
+                          onChange={(e) => updateAddForm(o.id, 'selectedRecipeId', e.target.value)}
+                        >
+                          <option value="">Выбрать блюдо</option>
+                          {recipes
+                            .filter((r) =>
+                              addForm[o.id]?.selectedCategory && addForm[o.id]?.selectedCategory !== 'all'
+                                ? r.category === addForm[o.id].selectedCategory
+                                : true
+                            )
+                            .map((r) => (
+                              <option key={r.id} value={r.id}>
+                                {r.name} ({getRecipeCategoryLabel(r.category)})
+                              </option>
+                            ))}
+                        </select>
+
+                        <input
+                          className="add-recipe-qty"
+                          type="number"
+                          min="1"
+                          placeholder="Кол-во порций"
+                          value={addForm[o.id]?.qty || ''}
+                          onChange={(e) => updateAddForm(o.id, 'qty', e.target.value)}
+                        />
+                        <button 
+                          className="add-recipe-btn" 
+                          onClick={() => handleAddItemToOrder(o.id)}
+                        >
+                          + Добавить блюдо
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </li>
+            );
+          })
         )}
       </ul>
     </div>
@@ -572,3 +625,4 @@ function Orders() {
 }
 
 export default Orders;
+

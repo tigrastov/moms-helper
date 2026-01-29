@@ -6,7 +6,7 @@ import { NotificationProvider } from './Context/NotificationContext.tsx';
 import Orders from '../src/Pages/Orders.tsx'
 import Profile from '../src/Pages/Profile.tsx'
 import Products from '../src/Pages/Products.tsx'
-import Resipes from './Pages/Resipes.tsx'
+import Recipes from '../src/Pages/Recipes.tsx'
 import  AuthPage from "./Pages/AuthPage.tsx";
 import { BottomTabs } from '../src/Components/BottomTabs.tsx' 
 import './App.css'
@@ -24,7 +24,7 @@ function App() {
           <Route path='/' element={<Orders />} />
           <Route path='/profile' element={<Profile />} />
           <Route path='/products' element={<Products />} />
-          <Route path='/recipes' element={<Resipes />} />
+          <Route path='/recipes' element={<Recipes />} />
           <Route path='/auth' element={<AuthPage />} />
 
         </Routes>
