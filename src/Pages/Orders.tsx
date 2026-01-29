@@ -1,6 +1,7 @@
-// src/Pages/Orders.tsx
+
 import React, { useState, useEffect, useMemo } from 'react';
-import './Orders.css'; // Предполагается, что у вас есть этот файл стилей
+import { useNavigate } from 'react-router-dom';
+import './Orders.css';
 import { db } from '../Firebase/firebase-config';
 import {
   collection,
@@ -15,7 +16,6 @@ import { useAuth } from '../Firebase/AuthContext';
 import { useNotification } from '../Context/NotificationContext';
 
 // --- ОПРЕДЕЛЕНИЯ ТИПОВ ВНУТРИ ЭТОГО ФАЙЛА ---
-
 export type ProductUnit = 'kg' | 'pcs' | 'l';
 
 export interface Product {
@@ -25,8 +25,8 @@ export interface Product {
 }
 
 export interface Ingredient {
-  productId: string; // ID продукта
-  qty: number;       // Количество
+  productId: string;
+  qty: number;
 }
 
 export type RecipeCategory = 'salad' | 'hot' | 'snack' | 'drink' | 'dessert' | 'other';
@@ -36,31 +36,29 @@ export interface Recipe {
   name: string;
   category: RecipeCategory;
   ingredients: Ingredient[];
-  portions?: number; // Опционально, можно использовать для масштабирования
+  portions?: number;
 }
 
 export interface OrderItem {
   recipeId: string;
-  qty: number; // Количество порций для этого рецепта в заказе
+  qty: number;
 }
 
 export interface Order {
   id: string;
   name: string;
-  date: string; // Дата заказа в формате 'YYYY-MM-DD'
+  date: string;
   items: OrderItem[];
 }
 
-// Интерфейс для состояния addForm, которое хранит данные для добавления блюд в конкретный заказ
 export interface AddFormState {
   [orderId: string]: {
-    selectedCategory?: RecipeCategory | 'all'; // Для фильтрации рецептов в селекте
+    selectedCategory?: RecipeCategory | 'all';
     selectedRecipeId?: string;
-    qty?: string; // Количество из инпута, как строка
+    qty?: string;
   };
 }
 
-// Интерфейс для результатов расчета продуктов
 export interface CalculatedProduct {
   name: string;
   unit: ProductUnit;
@@ -68,6 +66,7 @@ export interface CalculatedProduct {
 }
 
 function Orders() {
+  const navigate = useNavigate();
   const { currentUser, loading: authLoading } = useAuth();
   const { showNotification } = useNotification();
 
@@ -76,17 +75,13 @@ function Orders() {
   const [products, setProducts] = useState<Product[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
 
-  // --- СОСТОЯНИЯ ДЛЯ ФОРМ И ПОИСКА ЗАКАЗОВ ---
   const [newOrderName, setNewOrderName] = useState('');
-  const [newOrderDate, setNewOrderDate] = useState(''); // Формат 'YYYY-MM-DD'
-  const [searchDate, setSearchDate] = useState(''); // Для поиска по дате
+  const [newOrderDate, setNewOrderDate] = useState('');
+  const [searchDate, setSearchDate] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
-
-  // Состояние для добавления блюд в конкретный заказ
   const [addForm, setAddForm] = useState<AddFormState>({});
 
   // --- ХЕЛПЕРЫ ---
-
   const getRecipeCategoryLabel = (c: RecipeCategory | 'all'): string => {
     switch (c) {
       case 'all': return 'Все';
@@ -109,13 +104,11 @@ function Orders() {
     }
   };
 
-  // Форматирование даты для отображения
   const formatDateForDisplay = (dateStr: string): string => {
     try {
       const d = new Date(dateStr);
-      // Проверка на корректную дату
       if (isNaN(d.getTime())) {
-        return dateStr; // Возвращаем как есть, если невалидная
+        return dateStr;
       }
       return d.toLocaleDateString('ru-RU', {
         year: 'numeric',
@@ -127,21 +120,18 @@ function Orders() {
       return dateStr;
     }
   };
-   
 
-  // --- НОВАЯ ФУНКЦИЯ: переключение состояния аккордеона ---
   const toggleOrderExpansion = (orderId: string) => {
     setExpandedOrderId(expandedOrderId === orderId ? null : orderId);
   };
-  // Поиск рецепта по ID в загруженном массиве рецептов
+
   const findRecipeById = (id: string | undefined): Recipe | undefined =>
     recipes.find((r) => r.id === id);
 
-  // Поиск продукта по ID в загруженном массиве продуктов
   const findProductById = (id: string | undefined): Product | undefined =>
     products.find((p) => p.id === id);
 
-  // --- ЗАГРУЗКА ВСЕХ ДАННЫХ (PRODUCTS, RECIPES, ORDERS) ---
+  // --- ЗАГРУЗКА ДАННЫХ ---
   const fetchAllOrdersData = async () => {
     if (!currentUser) {
       setOrders([]);
@@ -153,23 +143,19 @@ function Orders() {
 
     setDataLoading(true);
     try {
-      // Загрузка продуктов пользователя
       const userProductsCollectionRef = collection(db, 'users', currentUser.uid, 'products');
       const productsSnap = await getDocs(query(userProductsCollectionRef));
       const fetchedProducts: Product[] = productsSnap.docs.map((d) => ({ ...(d.data() as Product), id: d.id }));
       setProducts(fetchedProducts);
 
-      // Загрузка рецептов пользователя
       const userRecipesCollectionRef = collection(db, 'users', currentUser.uid, 'recipes');
       const recipesSnap = await getDocs(query(userRecipesCollectionRef));
       const fetchedRecipes: Recipe[] = recipesSnap.docs.map((d) => ({ ...(d.data() as Recipe), id: d.id }));
       setRecipes(fetchedRecipes);
 
-      // Загрузка заказов пользователя
       const userOrdersCollectionRef = collection(db, 'users', currentUser.uid, 'orders');
       const ordersSnap = await getDocs(query(userOrdersCollectionRef));
       const fetchedOrders: Order[] = ordersSnap.docs.map((d) => ({ ...(d.data() as Order), id: d.id }));
-      // Сортировка по дате - новые сначала (по убыванию)
       fetchedOrders.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setOrders(fetchedOrders);
 
@@ -182,7 +168,6 @@ function Orders() {
     }
   };
 
-  // Вызов загрузки данных при изменении пользователя или при первом рендере
   useEffect(() => {
     if (!authLoading) {
       fetchAllOrdersData();
@@ -190,12 +175,11 @@ function Orders() {
   }, [authLoading, currentUser]);
 
   // --- ОБРАБОТЧИКИ ДЕЙСТВИЙ ---
-
-  // Создание нового заказа
   const handleCreateOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) {
-      showNotification('Вы должны быть авторизованы для создания заказов.', 'error');
+      showNotification('Войдите в систему для создания заказов', 'info');
+      navigate('/auth');
       return;
     }
     if (!newOrderName.trim() || !newOrderDate) {
@@ -213,14 +197,13 @@ function Orders() {
       setNewOrderName('');
       setNewOrderDate('');
       showNotification('Заказ успешно создан.', 'success');
-      await fetchAllOrdersData(); // Обновляем список
+      await fetchAllOrdersData();
     } catch (error) {
       console.error('Ошибка при создании заказа:', error);
       showNotification('Не удалось создать заказ. Пожалуйста, попробуйте еще раз.', 'error');
     }
   };
 
-  // Обновление состояния addForm для конкретного заказа
   const updateAddForm = (orderId: string, field: keyof AddFormState[string], value: string) => {
     setAddForm((prev) => ({
       ...prev,
@@ -231,7 +214,6 @@ function Orders() {
     }));
   };
 
-  // Добавление блюда в заказ
   const handleAddItemToOrder = async (orderId: string) => {
     if (!currentUser) {
       showNotification('Вы должны быть авторизованы для изменения заказов.', 'error');
@@ -251,7 +233,6 @@ function Orders() {
       return;
     }
 
-    // Проверяем, есть ли уже такой рецепт, и если есть, то обновляем его количество порций
     const existingItemIndex = currentOrder.items.findIndex(
       (item) => item.recipeId === form.selectedRecipeId
     );
@@ -274,15 +255,14 @@ function Orders() {
 
     try {
       await updateDoc(orderDocRef, { items: newItems });
-      setAddForm((prev) => ({ ...prev, [orderId]: {} })); // Очищаем форму добавления для этого заказа
-      await fetchAllOrdersData(); // Обновляем список
+      setAddForm((prev) => ({ ...prev, [orderId]: {} }));
+      await fetchAllOrdersData();
     } catch (error) {
       console.error('Ошибка при добавлении блюда в заказ:', error);
       showNotification('Не удалось добавить блюдо в заказ. Пожалуйста, попробуйте еще раз.', 'error');
     }
   };
 
-  // Обновление количества порций блюда в заказе
   const handleUpdateItemQty = async (orderId: string, index: number, value: string) => {
     if (!currentUser) {
       showNotification('Вы должны быть авторизованы для изменения заказов.', 'error');
@@ -309,7 +289,6 @@ function Orders() {
     try {
       await updateDoc(orderDocRef, { items: updatedItems });
       showNotification('Количество порций обновлено.', 'success');
-      // Оптимизация: обновить только текущий заказ в стейте
       setOrders((prev) =>
         prev.map((o) => (o.id === orderId ? { ...o, items: updatedItems } : o))
       );
@@ -319,7 +298,6 @@ function Orders() {
     }
   };
 
-  // Удаление блюда из заказа
   const handleRemoveItemFromOrder = async (orderId: string, index: number) => {
     if (!currentUser) {
       showNotification('Вы должны быть авторизованы для изменения заказов.', 'error');
@@ -339,7 +317,6 @@ function Orders() {
     try {
       await updateDoc(orderDocRef, { items: updatedItems });
       showNotification('Блюдо удалено из заказа.', 'success');
-      // Оптимизация: обновить только текущий заказ в стейте
       setOrders((prev) =>
         prev.map((o) => (o.id === orderId ? { ...o, items: updatedItems } : o))
       );
@@ -349,7 +326,6 @@ function Orders() {
     }
   };
 
-  // Удаление заказа
   const handleDeleteOrder = async (orderId: string) => {
     if (!currentUser) {
       showNotification('Вы должны быть авторизованы для удаления заказов.', 'error');
@@ -359,14 +335,14 @@ function Orders() {
       const orderDocRef = doc(db, 'users', currentUser.uid, 'orders', orderId);
       await deleteDoc(orderDocRef);
       showNotification('Заказ успешно удален.', 'success');
-      await fetchAllOrdersData(); // Обновляем список
+      await fetchAllOrdersData();
     } catch (error) {
       console.error('Ошибка при удалении заказа:', error);
       showNotification('Не удалось удалить заказ. Пожалуйста, попробуйте еще раз.', 'error');
     }
   };
 
-  // --- ЛОГИКА РАСЧЕТА ПРОДУКТОВ ДЛЯ ЗАКАЗА ---
+  // --- РАСЧЕТ ПРОДУКТОВ ---
   const calculateProductsForOrder = (order: Order): CalculatedProduct[] => {
     const result: { [productId: string]: CalculatedProduct } = {};
 
@@ -378,7 +354,6 @@ function Orders() {
         const product = findProductById(ingredient.productId);
         if (!product) return;
 
-        // Количество этого продукта, необходимое для одной порции рецепта * количество порций в заказе
         const neededAmount = ingredient.qty * orderItem.qty;
 
         if (result[product.id]) {
@@ -396,11 +371,9 @@ function Orders() {
     return Object.values(result);
   };
 
-  // --- ФИЛЬТРАЦИЯ ДЛЯ ОТОБРАЖЕНИЯ ---
-
+  // --- ФИЛЬТРАЦИЯ ---
   const filteredOrders = useMemo(() => {
     let currentOrders = orders;
-
     if (searchDate) {
       currentOrders = currentOrders.filter((o) => o.date === searchDate);
     }
@@ -408,29 +381,19 @@ function Orders() {
   }, [orders, searchDate]);
 
   // --- UI РЕНДЕР ---
-
-  // Отображение заглушки при загрузке
-  if (authLoading || dataLoading) {
-      return (
+  if (authLoading || (currentUser && dataLoading)) {
+    return (
       <div className="page">
         <p>Загрузка данных...</p>
       </div>
     );
   }
 
-  if (!currentUser) {
-    return (
-      <div className="page">
-        <p>Пожалуйста, войдите, чтобы управлять вашими заказами.</p>
-      </div>
-    );
-  }
-
   return (
     <div className="page">
-      <h1>Orders</h1>
+      <h1>Заказы</h1>
 
-      {/* Поиск по дате */}
+      {/* Поиск по дате - ДЛЯ ВСЕХ */}
       <div className="search-date-form">
         <p>Поиск заказа по дате</p>
         <input
@@ -441,7 +404,7 @@ function Orders() {
         />
       </div>
 
-      {/* Создание нового заказа */}
+      {/* Создание нового заказа - ДЛЯ ВСЕХ */}
       <form className="order-form" onSubmit={handleCreateOrder}>
         <label className="title-new-order">Создание нового заказа</label>
         <input
@@ -449,6 +412,7 @@ function Orders() {
           value={newOrderDate}
           className="date-new-order"
           onChange={(e) => setNewOrderDate(e.target.value)}
+          disabled={!currentUser}
         />
         <input
           className="name-new-order"
@@ -456,173 +420,199 @@ function Orders() {
           placeholder="Название заказа"
           value={newOrderName}
           onChange={(e) => setNewOrderName(e.target.value)}
+          disabled={!currentUser}
         />
-        <button className="btn-new-order" type="submit">
-          + Создать заказ
+        <button
+          className="btn-new-order"
+          type="submit"
+          // УБИРАЕМ disabled отсюда!
+          title={!currentUser ? "Авторизоваться для создания заказов" : ""}
+        >
+          {currentUser ? "+ Создать заказ" : "Авторизоваться для создания заказов"}
         </button>
       </form>
+      {/* Сообщение для неавторизованных */}
+      {!currentUser && (
+        <div className="auth-message">
+          <p>Для просмотра и управления заказами необходимо войти в систему.</p>
+        </div>
+      )}
 
-      <h2>Список заказов</h2>
-      
-      {/* Заказы в виде аккордеона */}
-      <ul className="order-list">
-        {filteredOrders.length === 0 ? (
-          <p>Пока нет заказов по вашему запросу.</p>
-        ) : (
-          filteredOrders.map((o) => {
-            const isExpanded = expandedOrderId === o.id;
-            
-            return (
-              <li key={o.id} className={`order-item ${isExpanded ? 'expanded' : 'collapsed'}`}>
-                {/* ЗАГОЛОВОК АККОРДЕОНА (всегда виден) */}
-                <div 
-                  className="order-header accordion-header"
-                  onClick={() => toggleOrderExpansion(o.id)}
-                >
-                  <div className="accordion-header-left">
-                    <span className={`accordion-arrow ${isExpanded ? 'expanded' : ''}`}>
-                      ▶
-                    </span>
-                    <strong className="order-name">{o.name}</strong>
-                    <span className="order-date">({formatDateForDisplay(o.date)})</span>
-                    <span className="order-dishes-count">
-                      {o.items.length} блюд
-                    </span>
-                  </div>
-                  
-                  <button 
-                    className="delete-order-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteOrder(o.id);
-                    }}
-                  >
-                    Удалить
-                  </button>
-                </div>
+      {/* Список заказов - ТОЛЬКО ДЛЯ АВТОРИЗОВАННЫХ */}
+      {currentUser ? (
+        <>
+          <h2>Список заказов</h2>
 
-                {/* СОДЕРЖИМОЕ АККОРДЕОНА (только если открыт) */}
-                {isExpanded && (
-                  <div className="order-content">
-                    {/* Блюда в заказе */}
-                    <div className="order-recipes-container">
-                      <button className="close-btn" onClick={() => toggleOrderExpansion(o.id)}>Close</button>
-                      <p><strong>Блюда в заказе:</strong></p>
-                      <ul className="order-recipes">
-                        {o.items.length === 0 ? (
-                          <li>Нет блюд в этом заказе.</li>
-                        ) : (
-                          o.items.map((item, i) => {
-                            const recipe = findRecipeById(item.recipeId);
-                            return (
-                              <li 
-                                className="order-recipe-item" 
-                                key={`${item.recipeId}-${i}`}
-                              >
-                                <span className="recipe-name">
-                                  {recipe ? recipe.name : 'Неизвестное блюдо'}
-                                </span>
-                                <input
-                                  className="qty-person-input"
-                                  type="number"
-                                  min="1"
-                                  value={item.qty}
-                                  onChange={(e) => handleUpdateItemQty(o.id, i, e.target.value)}
-                                />
-                                <span className="portions-text">порц.</span>
-                                <button 
-                                  className="remove-recipe-btn"
-                                  onClick={() => handleRemoveItemFromOrder(o.id, i)}
-                                >
-                                  ×
-                                </button>
-                              </li>
-                            );
-                          })
-                        )}
-                      </ul>
-                    </div>
+          <ul className="order-list">
+            {filteredOrders.length === 0 ? (
+              <p>Пока нет заказов по вашему запросу.</p>
+            ) : (
+              filteredOrders.map((o) => {
+                const isExpanded = expandedOrderId === o.id;
 
-                    {/* Необходимые продукты */}
-                    <div className="order-products-container">
-                      <p><strong>Необходимые продукты:</strong></p>
-                      <ul className="order-summary">
-                        {calculateProductsForOrder(o).length === 0 ? (
-                          <li>Нет данных для расчета.</li>
-                        ) : (
-                          calculateProductsForOrder(o).map((p) => (
-                            <li key={p.name} className="product-item">
-                              <span className="product-name">{p.name}</span> 
-                              <span className="product-amount"> = {p.amount} {formatUnit(p.unit)}</span>
-                            </li>
-                          ))
-                        )}
-                      </ul>
-                    </div>
-
-                    {/* Форма добавления блюда */}
-                    <div className="add-dish-container">
-                      <p><strong>Добавить блюдо к заказу:</strong></p>
-                      <div className="order-add">
-                        <select
-                          className="select-category"
-                          value={addForm[o.id]?.selectedCategory || 'all'}
-                          onChange={(e) => updateAddForm(o.id, 'selectedCategory', e.target.value)}
-                        >
-                          <option value="all">Все категории</option>
-                          <option value="salad">{getRecipeCategoryLabel('salad')}</option>
-                          <option value="hot">{getRecipeCategoryLabel('hot')}</option>
-                          <option value="snack">{getRecipeCategoryLabel('snack')}</option>
-                          <option value="drink">{getRecipeCategoryLabel('drink')}</option>
-                          <option value="dessert">{getRecipeCategoryLabel('dessert')}</option>
-                          <option value="other">{getRecipeCategoryLabel('other')}</option>
-                        </select>
-
-                        <select
-                          className="select-recipe"
-                          value={addForm[o.id]?.selectedRecipeId || ''}
-                          onChange={(e) => updateAddForm(o.id, 'selectedRecipeId', e.target.value)}
-                        >
-                          <option value="">Выбрать блюдо</option>
-                          {recipes
-                            .filter((r) =>
-                              addForm[o.id]?.selectedCategory && addForm[o.id]?.selectedCategory !== 'all'
-                                ? r.category === addForm[o.id].selectedCategory
-                                : true
-                            )
-                            .map((r) => (
-                              <option key={r.id} value={r.id}>
-                                {r.name} ({getRecipeCategoryLabel(r.category)})
-                              </option>
-                            ))}
-                        </select>
-
-                        <input
-                          className="add-recipe-qty"
-                          type="number"
-                          min="1"
-                          placeholder="Кол-во порций"
-                          value={addForm[o.id]?.qty || ''}
-                          onChange={(e) => updateAddForm(o.id, 'qty', e.target.value)}
-                        />
-                        <button 
-                          className="add-recipe-btn" 
-                          onClick={() => handleAddItemToOrder(o.id)}
-                        >
-                          + Добавить блюдо
-                        </button>
+                return (
+                  <li key={o.id} className={`order-item ${isExpanded ? 'expanded' : 'collapsed'}`}>
+                    {/* ЗАГОЛОВОК АККОРДЕОНА */}
+                    <div
+                      className="order-header accordion-header"
+                      onClick={() => toggleOrderExpansion(o.id)}
+                    >
+                      <div className="accordion-header-left">
+                        <span className={`accordion-arrow ${isExpanded ? 'expanded' : ''}`}>
+                          ▶
+                        </span>
+                        <strong className="order-name">{o.name}</strong>
+                        <span className="order-date">({formatDateForDisplay(o.date)})</span>
+                        <span className="order-dishes-count">
+                          {o.items.length} блюд
+                        </span>
                       </div>
+
+                      <button
+                        className="delete-order-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteOrder(o.id);
+                        }}
+                      >
+                        Удалить
+                      </button>
                     </div>
-                  </div>
-                )}
-              </li>
-            );
-          })
-        )}
-      </ul>
+
+                    {/* СОДЕРЖИМОЕ АККОРДЕОНА */}
+                    {isExpanded && (
+                      <div className="order-content">
+                        {/* Блюда в заказе */}
+                        <button className="close-btn" onClick={() => toggleOrderExpansion(o.id)}>свернуть</button>
+                        <div className="order-recipes-container">
+                          <p><strong>Блюда в заказе:</strong></p>
+                          <ul className="order-recipes">
+                            {o.items.length === 0 ? (
+                              <li>Нет блюд в этом заказе.</li>
+                            ) : (
+                              o.items.map((item, i) => {
+                                const recipe = findRecipeById(item.recipeId);
+                                return (
+                                  <li
+                                    className="order-recipe-item"
+                                    key={`${item.recipeId}-${i}`}
+                                  >
+                                    <span className="recipe-name">
+                                      {recipe ? recipe.name : 'Неизвестное блюдо'}
+                                    </span>
+                                    <input
+                                      className="qty-person-input"
+                                      type="number"
+                                      min="1"
+                                      value={item.qty}
+                                      onChange={(e) => handleUpdateItemQty(o.id, i, e.target.value)}
+                                    />
+                                    <span className="portions-text">порц.</span>
+                                    <button
+                                      className="remove-recipe-btn"
+                                      onClick={() => handleRemoveItemFromOrder(o.id, i)}
+                                    >
+                                      ×
+                                    </button>
+                                  </li>
+                                );
+                              })
+                            )}
+                          </ul>
+                        </div>
+
+                        {/* Необходимые продукты */}
+                        <div className="order-products-container">
+                          <p><strong>Необходимые продукты:</strong></p>
+                          <ul className="order-summary">
+                            {calculateProductsForOrder(o).length === 0 ? (
+                              <li>Нет данных для расчета.</li>
+                            ) : (
+                              calculateProductsForOrder(o).map((p) => (
+                                <li key={p.name} className="product-item">
+                                  <span className="product-name">{p.name}</span>
+                                  <span className="product-amount"> = {p.amount} {formatUnit(p.unit)}</span>
+                                </li>
+                              ))
+                            )}
+                          </ul>
+                        </div>
+
+                        {/* Форма добавления блюда */}
+                        <div className="add-dish-container">
+                          <p><strong>Добавить блюдо к заказу:</strong></p>
+                          <div className="order-add">
+                            <select
+                              className="select-category"
+                              value={addForm[o.id]?.selectedCategory || 'all'}
+                              onChange={(e) => updateAddForm(o.id, 'selectedCategory', e.target.value)}
+                            >
+                              <option value="all">Все категории</option>
+                              <option value="salad">{getRecipeCategoryLabel('salad')}</option>
+                              <option value="hot">{getRecipeCategoryLabel('hot')}</option>
+                              <option value="snack">{getRecipeCategoryLabel('snack')}</option>
+                              <option value="drink">{getRecipeCategoryLabel('drink')}</option>
+                              <option value="dessert">{getRecipeCategoryLabel('dessert')}</option>
+                              <option value="other">{getRecipeCategoryLabel('other')}</option>
+                            </select>
+
+                            <select
+                              className="select-recipe"
+                              value={addForm[o.id]?.selectedRecipeId || ''}
+                              onChange={(e) => updateAddForm(o.id, 'selectedRecipeId', e.target.value)}
+                            >
+                              <option value="">Выбрать блюдо</option>
+                              {recipes
+                                .filter((r) =>
+                                  addForm[o.id]?.selectedCategory && addForm[o.id]?.selectedCategory !== 'all'
+                                    ? r.category === addForm[o.id].selectedCategory
+                                    : true
+                                )
+                                .map((r) => (
+                                  <option key={r.id} value={r.id}>
+                                    {r.name} ({getRecipeCategoryLabel(r.category)})
+                                  </option>
+                                ))}
+                            </select>
+
+                            <input
+                              className="add-recipe-qty"
+                              type="number"
+                              min="1"
+                              placeholder="Кол-во порций"
+                              value={addForm[o.id]?.qty || ''}
+                              onChange={(e) => updateAddForm(o.id, 'qty', e.target.value)}
+                            />
+                            <button
+                              className="add-recipe-btn"
+                              onClick={() => handleAddItemToOrder(o.id)}
+                            >
+                              + Добавить блюдо
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                );
+              })
+            )}
+          </ul>
+        </>
+      ) : (
+        <div className="demo-section">
+          <h2>Пример работы с заказами</h2>
+          <p>После входа в систему вы сможете:</p>
+          <ul className="demo-features">
+            <li>Создавать новые заказы</li>
+            <li>Добавлять блюда в заказы</li>
+            <li>Автоматически рассчитывать необходимые продукты</li>
+            <li>Просматривать историю заказов</li>
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
 
 export default Orders;
-

@@ -1,64 +1,64 @@
-// src/Pages/Products.tsx
-import { useState, useEffect } from 'react';
-import './Products.css'; // Предполагается, что у вас есть этот файл стилей
-import { db } from '../Firebase/firebase-config'; // Импорт экземпляра Firestore
-import { collection, addDoc, getDocs, deleteDoc, doc, query } from 'firebase/firestore'; // Добавляем query для явных запросов
-import { useAuth } from '../Firebase/AuthContext'; // Импорт вашего AuthContext
 
-// Обновленный интерфейс Product
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import './Products.css';
+import { db } from '../Firebase/firebase-config';
+import { collection, addDoc, getDocs, deleteDoc, doc, query } from 'firebase/firestore';
+import { useAuth } from '../Firebase/AuthContext';
+
 interface Product {
-  id?: string; // ID документа Firestore, опционально при создании
+  id?: string;
   name: string;
-  unit: 'kg' | 'pcs' | 'l'; // Единица измерения теперь строго типизирована
+  unit: 'kg' | 'pcs' | 'l';
 }
 
 function Products() {
+  const navigate = useNavigate();
   const { currentUser, loading } = useAuth();
-  const [name, setName] = useState(''); // Для нового продукта
-  const [unit, setUnit] = useState<Product['unit']>('kg'); // Для нового продукта, по умолчанию 'kg'
-  const [products, setProducts] = useState<Product[]>([]); // Все продукты пользователя
-  const [search, setSearch] = useState(''); // Для поля поиска
+  const [name, setName] = useState('');
+  const [unit, setUnit] = useState<Product['unit']>('kg');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [search, setSearch] = useState('');
 
   // Функция для загрузки продуктов текущего пользователя
   const fetchProducts = async () => {
     if (!currentUser) {
-      setProducts([]); // Очищаем список, если нет пользователя
+      setProducts([]);
       return;
     }
 
     try {
       const userProductsCollectionRef = collection(db, 'users', currentUser.uid, 'products');
-      const q = query(userProductsCollectionRef); // Создаем запрос к коллекции
-      const snap = await getDocs(q); // Получаем данные
+      const q = query(userProductsCollectionRef);
+      const snap = await getDocs(q);
 
       const items: Product[] = snap.docs.map((d) => ({
         id: d.id,
-        ...d.data() as Product, // Приводим к типу Product
+        ...d.data() as Product,
       }));
 
-      // Сортировка по названию
       items.sort((a, b) => a.name.localeCompare(b.name));
       setProducts(items);
     } catch (error) {
       console.error('Ошибка при получении продуктов:', error);
-      // Здесь можно добавить неблокирующее уведомление об ошибке, если хотите
     }
   };
 
-  // Загрузка продуктов при изменении пользователя или при первом рендере
   useEffect(() => {
-    if (!loading) { // Ждем окончания загрузки пользователя
+    if (!loading) {
       fetchProducts();
     }
-  }, [loading, currentUser]); // Зависимости: загрузка и текущий пользователь
+  }, [loading, currentUser]);
 
   // Обработчик добавления нового продукта
   const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault(); // Предотвращаем перезагрузку страницы
+    e.preventDefault();
+    
     if (!currentUser) {
-      console.warn('Попытка добавить продукт неавторизованным пользователем.');
+      navigate('/auth');
       return;
     }
+    
     if (!name.trim()) {
       console.warn('Название продукта не может быть пустым.');
       return;
@@ -68,12 +68,11 @@ function Products() {
       const userProductsCollectionRef = collection(db, 'users', currentUser.uid, 'products');
       await addDoc(userProductsCollectionRef, { name: name.trim(), unit });
 
-      setName(''); // Сбрасываем поле ввода названия
-      setUnit('kg'); // Сбрасываем выбор единицы измерения
-      await fetchProducts(); // Обновляем список продуктов
+      setName('');
+      setUnit('kg');
+      await fetchProducts();
     } catch (error) {
       console.error('Ошибка при добавлении продукта:', error);
-      // Здесь можно добавить неблокирующее уведомление об ошибке
     }
   };
 
@@ -86,11 +85,9 @@ function Products() {
     try {
       const productDocRef = doc(db, 'users', currentUser.uid, 'products', id);
       await deleteDoc(productDocRef);
-      // setProducts((prev) => prev.filter((p) => p.id !== id)); // Можно так, но fetchProducts надежнее
-      await fetchProducts(); // Обновляем список продуктов
+      await fetchProducts();
     } catch (error) {
       console.error('Ошибка при удалении продукта:', error);
-      // Здесь можно добавить неблокирующее уведомление об ошибке
     }
   };
 
@@ -100,7 +97,7 @@ function Products() {
       case 'kg': return 'кг';
       case 'pcs': return 'шт';
       case 'l': return 'л';
-      default: return String(u); // На случай, если вдруг попадет что-то неожиданное
+      default: return String(u);
     }
   };
 
@@ -113,16 +110,11 @@ function Products() {
     return <div className="page">Загрузка пользователя...</div>;
   }
 
-  if (!currentUser) {
-    // В зависимости от логики вашего AuthContext, здесь может быть перенаправление
-    // или сообщение о необходимости входа
-    return <div className="page">Для управления продуктами необходимо войти в систему.</div>;
-  }
-
   return (
     <div className="page">
       <h1>Продукты</h1>
 
+      {/* Поиск товара - ДЛЯ ВСЕХ */}
       <div className="search-form">
         <p>Поиск товара</p>
         <input
@@ -131,9 +123,11 @@ function Products() {
           placeholder="Введите название товара"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          disabled={!currentUser}
         />
       </div>
 
+      {/* Добавление товара - ДЛЯ ВСЕХ */}
       <div className="add-product">
         <p>Добавить товар</p>
         <form className="add-product-form" onSubmit={handleAdd}>
@@ -143,33 +137,72 @@ function Products() {
             placeholder="Название товара"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            disabled={!currentUser}
           />
 
-          <select className="select-type-product" value={unit} onChange={(e) => setUnit(e.target.value as Product['unit'])}>
+          <select 
+            className="select-type-product" 
+            value={unit} 
+            onChange={(e) => setUnit(e.target.value as Product['unit'])}
+            disabled={!currentUser}
+          >
             <option value="kg">Весовой (кг)</option>
             <option value="pcs">Штучный (шт)</option>
             <option value="l">Литраж (л)</option>
           </select>
 
-          <button className="add-product-btn" type="submit">
-            + Добавить товар
+          <button 
+            className="add-product-btn" 
+            type="submit"
+            title={!currentUser ? "Авторизоваться для добавления товаров" : ""}
+          >
+            {currentUser ? "+ Добавить товар" : "Авторизоваться для добавления товаров"}
           </button>
         </form>
       </div>
 
-      <div className="products-list-section"> {/* Изменил класс, чтобы избежать конфликтов */}
-        <p>Список товаров</p>
-        <ul className="product-list">
-          {filteredProducts.map((p) => (
-            <li key={p.id}>
-              {p.name} — {formatUnit(p.unit)}
-              <button className="del-prod-btn" onClick={() => handleDelete(p.id!)}>
-                ×
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {/* Сообщение для неавторизованных */}
+      {!currentUser && (
+        <div className="auth-message">
+          <p>Для управления продуктами необходимо войти в систему.</p>
+        </div>
+      )}
+
+      {/* Список товаров - ТОЛЬКО ДЛЯ АВТОРИЗОВАННЫХ */}
+      {currentUser ? (
+        <div className="products-list-section">
+          <p>Список товаров</p>
+          {filteredProducts.length === 0 ? (
+            <p className="no-products">Товары не найдены</p>
+          ) : (
+            <ul className="product-list">
+              {filteredProducts.map((p) => (
+                <li key={p.id}>
+                  <span className="product-name">{p.name}</span>
+                  <span className="product-unit"> — {formatUnit(p.unit)}</span>
+                  <button 
+                    className="del-prod-btn" 
+                    onClick={() => handleDelete(p.id!)}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ) : (
+        <div className="demo-section">
+          <h2>Пример работы с продуктами</h2>
+          <p>После авторизации вы сможете:</p>
+          <ul className="demo-features">
+            <li>Добавлять новые продукты с различными единицами измерения</li>
+            <li>Поиск по названию продуктов</li>
+            <li>Управлять списком продуктов</li>
+            <li>Использовать продукты при создании рецептов</li>
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

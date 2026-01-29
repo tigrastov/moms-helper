@@ -320,3 +320,65 @@
     align-self: flex-end;
   }
 }
+
+
+/* Добавь в Orders.css */
+
+.auth-message {
+  padding: 20px;
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 8px;
+  margin: 20px 0;
+  text-align: center;
+  color: #856404;
+}
+
+.demo-section {
+  padding: 30px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  text-align: left;
+  margin-top: 30px;
+  border: 2px dashed #dee2e6;
+}
+
+.demo-features {
+  list-style: none;
+  padding: 0;
+  margin: 15px 0 0 0;
+}
+
+.demo-features li {
+  padding: 8px 0;
+  padding-left: 25px;
+  position: relative;
+}
+
+.demo-features li:before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #4CAF50;
+  font-weight: bold;
+}
+
+/* Стили для отключенных элементов */
+.btn-new-order:disabled,
+.date-new-order:disabled,
+.name-new-order:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #f0f0f0;
+}
+
+.btn-new-order:disabled:hover {
+  background-color: #f0f0f0;
+  transform: none;
+}
+
+.date-new-order:disabled,
+.name-new-order:disabled {
+  background-color: #f9f9f9;
+  color: #999;
+}
